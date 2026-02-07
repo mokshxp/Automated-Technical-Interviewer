@@ -5,209 +5,228 @@
 ![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB.svg)
-![AI](https://img.shields.io/badge/AI-Gemini%201.5%20Pro-8E44AD)
+![Gemini](https://img.shields.io/badge/AI-Gemini%201.5%20Pro-8E44AD)
 
-> **An AI-powered platform for conducting automated, adaptive technical interviews based on candidate resumes.**
+> **A next-generation AI-powered platform for conducting automated, adaptive, and realistic technical interviews.**
 
 ---
 
-## 📚 Table of Contents
+## � Table of Contents
 
 - [Overview](#-overview)
 - [Key Features](#-key-features)
 - [System Architecture](#-system-architecture)
 - [Tech Stack](#-tech-stack)
 - [Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Backend Setup](#backend-setup)
+  - [Frontend Setup](#frontend-setup)
 - [Usage Guide](#-usage-guide)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
+- [Troubleshooting](#-troubleshooting)
 - [Roadmap](#-roadmap)
 
 ---
 
 ## 🔍 Overview
 
-The **Automated Technical Interviewer** is designed to simulate a real technical screening round.
-
-Unlike traditional quiz-based platforms, this system:
-- Reads and understands resumes
-- Generates context-aware questions
-- Adapts follow-ups based on candidate responses
-- Evaluates problem-solving and reasoning, not memorization
-
-The platform uses **Google Gemini 1.5 Pro** to act as an intelligent interviewer across multiple interview rounds.
-
----
+The **Automated Technical Interviewer** is designed to streamline the recruitment process by autonomously conducting initial technical screening rounds. Unlike standard quiz-based platforms, this system leverages **Google's Gemini 1.5 Pro LLM** to simulate a human interviewer. It reads resumes, asks context-aware questions, evaluates code in real-time, and even holds spoken conversations using speech synthesis and recognition.
 
 ## ✨ Key Features
 
 | Feature | Description |
-|------|-------------|
-| **Resume Analysis** | Parses PDF/DOCX resumes to extract skills, projects, and experience. |
-| **Adaptive AI Interviewer** | Dynamically generates follow-up questions using Gemini 1.5 Pro. |
-| **Interactive Coding Environment** | Browser-based code editor with server-side execution sandbox. |
-| **Voice Interaction** | Text-to-Speech (TTS) and Speech-to-Text (STT) support. |
-| **Multi-Round Assessment** | MCQs, DSA coding rounds, and system design discussions. |
-| **Automated Evaluation** | AI-generated feedback and scoring (planned). |
-
----
+| :--- | :--- |
+| **📄 Resume Analysis** | Automatically parses PDF/Docx resumes to extract skills and projects, tailoring the interview context. |
+| **🧠 Adaptive AI Interviewer** | Uses Gemini 1.5 Pro to generate dynamic follow-up questions based on candidate responses, not just static scripts. |
+| **💻 Interactive Coding Environment** | Full-featured code editor with syntax highlighting and server-side execution (Sandbox). |
+| **🗣️ Voice-Enabled Interaction** | Real-time Speech-to-Text (STT) and Text-to-Speech (TTS) for a natural conversational experience. |
+| **🛡️ Comprehensive Assessment** | Covers **MCQ (CS Fundamentals)**, **DSA (Coding)**, and **System Design**. |
+| **📊 Automated Scoring & Feedback** | Generates detailed performance reports immediately after the interview. |
 
 ## 🏗 System Architecture
 
 ```mermaid
 graph TD
-    subgraph Frontend["Frontend (React + Vite)"]
-        UI[Web UI]
-        Editor[Code Editor]
-        Audio[Voice Input / Output]
+    subgraph Frontend ["Frontend (React + Vite)"]
+        UI[Web App]
+        Audio[Audio Recorder/Player]
+        Editor[Monaco Code Editor]
     end
 
-    subgraph Backend["Backend (FastAPI)"]
-        API[API Router]
-        Auth[JWT Auth]
+    subgraph Backend ["Backend (FastAPI)"]
+        API[FastAPI Router]
+        Auth[Auth Service JWT]
         Flow[Interview State Machine]
-        Sandbox[Code Sandbox]
-        LLM[LLM Service]
+        Sandbox[Code Executor]
+        LLM_Service[LLM Service Wrapper]
     end
 
-    subgraph External["External Services"]
-        Gemini[Gemini 1.5 Pro API]
-        DB[(Database)]
+    subgraph External_Services ["External Services"]
+        Gemini[Google Gemini 1.5 Pro API]
+        DB[(SQLite / PostgreSQL)]
     end
 
-    UI --> API
-    Audio --> API
+    UI -->|HTTP/JSON| API
+    UI -->|Audio Blob| API
+    
     API --> Auth
     API --> Flow
-    Flow --> LLM
+    
+    Flow --> LLM_Service
     Flow --> Sandbox
     Flow --> DB
-    LLM --> Gemini
-🛠 Tech Stack
-Backend
+    
+    LLM_Service -->|Prompt/Context| Gemini
+    Gemini -->|Response/Feedback| LLM_Service
+```
 
-FastAPI (Async Python)
+## 🛠 Tech Stack
 
-Google Gemini 1.5 Pro
+### **Backend**
+-   **Framework:** [FastAPI](https://fastapi.tiangolo.com/) (High-performance Async Python)
+-   **Database:** SQLite + `aiosqlite` (Dev) / PostgreSQL (Prod)
+-   **AI Model:** Google Gemini 1.5 Pro
+-   **Speech:** `gTTS` (Google Text-to-Speech)
+-   **ORM:** SQLAlchemy (Async)
 
-SQLAlchemy (Async ORM)
+### **Frontend**
+-   **Framework:** React (Vite)
+-   **Language:** TypeScript
+-   **Styling:** Tailwind CSS + Lucide React (Icons)
+-   **State:** React Hooks + Context API
+-   **HTTP Client:** Axios
 
-SQLite (Dev) / PostgreSQL (Prod)
+---
 
-JWT Authentication
+## � Getting Started
 
-gTTS (Text-to-Speech)
+Follow these steps to set up the project locally.
 
-Frontend
+### Prerequisites
+-   **Python 3.10+**
+-   **Node.js 16+** & **npm**
+-   **Google Cloud API Key** (with access to Gemini API)
 
-React (Vite)
+### Backend Setup
 
-TypeScript
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/yourusername/automated-technical-interviewer.git
+    cd automated-technical-interviewer/backend
+    ```
 
-Tailwind CSS
+2.  **Create virtual environment:**
+    ```bash
+    python -m venv venv
+    
+    # Windows
+    venv\Scripts\activate
+    
+    # Mac/Linux
+    source venv/bin/activate
+    ```
 
-Monaco Code Editor
+3.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    pip install aiosqlite  # Required for async SQLite
+    ```
 
-Axios
+4.  **Configure Environment:**
+    Create a `.env` file in the `backend/` directory:
+    ```env
+    GEMINI_API_KEY=your_google_api_key_here
+    DATABASE_URL=sqlite+aiosqlite:///./interview.db
+    # REDIS_URL=redis://localhost:6379/0 (Optional)
+    ```
 
-🚀 Getting Started
-Prerequisites
+5.  **Run the Server:**
+    ```bash
+    uvicorn app.main:app --reload
+    ```
+    ✅ Server running at: `http://localhost:8000`  
+    📄 API Docs: `http://localhost:8000/docs`
 
-Python 3.10+
+### Frontend Setup
 
-Node.js 16+
+1.  **Navigate to frontend directory:**
+    ```bash
+    cd ../frontend
+    ```
 
-npm
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-Google Gemini API key
+3.  **Start Development Server:**
+    ```bash
+    npm run dev
+    ```
+    ✅ App running at: `http://localhost:5173`
 
-Backend Setup
-git clone https://github.com/mokshxp/Automated-Technical-Interviewer.git
-cd Automated-Technical-Interviewer/backend
+---
 
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+## � Usage Guide
 
-pip install -r requirements.txt
-pip install aiosqlite
+1.  **Registration**: Sign up as a new candidate on the landing page.
+2.  **Resume Upload**: Upload your resume (PDF/DOCX) to initialize the session.
+3.  **Online Assessment (OA)**:
+    -   Complete the **MCQ Round** (CS Fundamentals).
+    -   Solve the **Coding Challenge** in the integrated editor.
+4.  **Technical Rounds**:
+    -   **Round 1 (DSA)**: Explain your logic and optimize solutions.
+    -   **Round 2 (System Design)**: Discuss architecture for scalable systems.
+5.  **Completion**: Review your automated feedback report (Coming Soon).
 
+---
 
-Create .env file:
+## 🔌 API Documentation
 
-GEMINI_API_KEY=your_api_key_here
-DATABASE_URL=sqlite+aiosqlite:///./interview.db
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/auth/login` | `POST` | Authenticates user & returns JWT. |
+| `/candidates/upload_resume` | `POST` | Uploads and parses resume file. |
+| `/interview/{id}/state` | `GET` | Retrieves current round and session status. |
+| `/interview/{id}/chat` | `POST` | Sends text message to AI interviewer. |
+| `/interview/{id}/speak` | `POST` | Sends audio blob for voice interaction. |
+| `/interview/{id}/run_code` | `POST` | Executes python code in sandbox. |
 
+---
 
-Run server:
+## 📂 Project Structure
 
-uvicorn app.main:app --reload
+```bash
+├── backend/
+│   ├── app/
+│   │   ├── routers/        # API route handlers
+│   │   ├── services/       # Core business logic (LLM, Flow, Code Exec)
+│   │   ├── models.py       # Database schemas
+│   │   └── main.py         # Application entry point
+│   ├── requirements.txt
+│   └── .env
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   └── interview/  # Interview specific UI components
+│   │   ├── pages/          # Full page layouts
+│   │   └── context/        # Global state
+│   └── package.json
+```
 
-
-API docs available at: http://localhost:8000/docs
-
-Frontend Setup
-cd ../frontend
-npm install
-npm run dev
-
-
-Application runs at: http://localhost:5173
-
-📘 Usage Guide
-
-Register as a candidate
-
-Upload resume (PDF/DOCX)
-
-Complete MCQ assessment
-
-Solve DSA coding problems
-
-Participate in system design discussion
-
-Review AI-generated feedback (planned)
-
-🔌 API Documentation
-Endpoint	Method	Description
-/auth/login	POST	Authenticate user
-/candidates/upload_resume	POST	Upload and parse resume
-/interview/{id}/state	GET	Get interview state
-/interview/{id}/chat	POST	Text-based interaction
-/interview/{id}/speak	POST	Voice interaction
-/interview/{id}/run_code	POST	Execute code in sandbox
-📂 Project Structure
-backend/
- ├── app/
- │   ├── routers/
- │   ├── services/
- │   ├── models.py
- │   └── main.py
- ├── requirements.txt
- └── .env
-
-frontend/
- ├── src/
- │   ├── components/
- │   ├── pages/
- │   └── context/
- └── package.json
-
-🗺 Roadmap
-
- WebSocket support for real-time streaming
-
- Multi-language code execution (Java, C++)
-
- Automated interview feedback reports
-
- Recruiter/admin dashboard
-
- Proctoring and identity verification
-
-Built with ❤️ by Moksh Gupta
-
-
+---
 
 
 
+## 🗺 Roadmap
 
+- [ ] **WebSocket Integration**: For lower latency voice and chat streaming.
+- [ ] **Proctoring**: Webcam integration for identity verification.
+- [ ] **Multi-Language Support**: Support for Java/C++ in code execution.
+- [ ] **Admin Dashboard**: For recruiters to review candidate sessions.
+
+---
+
+> Built with ❤️ by the Automated Technical Interviewer Team.
