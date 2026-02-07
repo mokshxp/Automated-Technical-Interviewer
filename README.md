@@ -48,21 +48,21 @@ The **Automated Technical Interviewer** is designed to streamline the recruitmen
 
 ```mermaid
 graph TD
-    subgraph Frontend [User Interface (React + Vite)]
+    subgraph Frontend ["Frontend (React + Vite)"]
         UI[Web App]
         Audio[Audio Recorder/Player]
         Editor[Monaco Code Editor]
     end
 
-    subgraph Backend [API Server (FastAPI)]
+    subgraph Backend ["Backend (FastAPI)"]
         API[FastAPI Router]
-        Auth[Auth Service (JWT)]
+        Auth[Auth Service JWT]
         Flow[Interview State Machine]
         Sandbox[Code Executor]
         LLM_Service[LLM Service Wrapper]
     end
 
-    subgraph External_Services [External Services]
+    subgraph External_Services ["External Services"]
         Gemini[Google Gemini 1.5 Pro API]
         DB[(SQLite / PostgreSQL)]
     end
@@ -218,11 +218,7 @@ Follow these steps to set up the project locally.
 
 ---
 
-## ❓ Troubleshooting
 
--   **`socket.gaierror` on Startup**: Check logic in `database.py`. Ensure `.env` is loaded *before* `DATABASE_URL` is accessed.
--   **Gemini 404 Error**: Verify your API key and ensure the model `models/gemini-pro-latest` or `gemini-1.5-pro` is available in your region.
--   **Database Locks**: If using SQLite, avoid opening the database file in other viewers while the app is writing.
 
 ## 🗺 Roadmap
 
