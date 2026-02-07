@@ -3,7 +3,8 @@ import sys
 import os
 
 # Set DB URL for local execution
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:password@localhost:5432/interview_db"
+# Set DB URL for local execution
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_debug.db"
 
 sys.path.append(os.getcwd())
 from app.database import AsyncSessionLocal
@@ -12,6 +13,12 @@ from app.utils import get_password_hash
 import time
 
 async def debug_insert():
+
+    # Create tables first for SQLite
+    from app.database import engine, Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     async with AsyncSessionLocal() as db:
         email = f"debug_{int(time.time())}@test.com"
         print(f"Trying to insert user {email}")

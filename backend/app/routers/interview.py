@@ -272,7 +272,7 @@ async def speak_endpoint(session_id: int, audio: UploadFile = File(...), db: Asy
             f"\n\nContext:\n{history_context}"
         )
         
-        model = genai.GenerativeModel("models/gemini-1.5-flash")
+        model = genai.GenerativeModel("models/gemini-pro-latest")
         result = model.generate_content([prompt, user_audio_file])
         
         ai_text = result.text

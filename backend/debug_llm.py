@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Setup logging to file
-log_file = open("/app/debug_llm_output.txt", "w")
+log_file = open("debug_llm_output.txt", "w")
 sys.stdout = log_file
 sys.stderr = log_file
 
@@ -31,7 +31,7 @@ if api_key:
         # mod_list = list(genai.list_models())
         # print(f"Available Models: {[m.name for m in mod_list]}")
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('models/gemini-pro-latest')
         print("Model initialized.")
         
         response = model.generate_content("Hello")
