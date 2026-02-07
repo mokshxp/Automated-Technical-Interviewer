@@ -113,10 +113,7 @@ export default function InterviewSession() {
                 message = "Technical Round 2 (System Design) starting shortly.\nPrepare to discuss projects and architecture.";
                 duration = 60;
                 break;
-            case 'prep_behavioral':
-                message = "Behavioral Round starting shortly.\nRelax and be ready to discuss your experiences.";
-                duration = 60;
-                break;
+
         }
 
         // Override for quick testing if needed, but sticking to logic
@@ -132,7 +129,7 @@ export default function InterviewSession() {
         return <RoundOA_Coding sessionId={sessionId!} onComplete={handleRoundComplete} />;
     }
 
-    if (['tech_1', 'tech_2', 'behavioral'].includes(round)) {
+    if (['tech_1', 'tech_2'].includes(round)) {
         return <RoundChat sessionId={sessionId!} roundType={round} onComplete={handleRoundComplete} />;
     }
 

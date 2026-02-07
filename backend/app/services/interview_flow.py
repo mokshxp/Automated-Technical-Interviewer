@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from ..models import InterviewSession, Question, Candidate
 from datetime import datetime
 
-PIPELINE = ["oa_mcq", "oa_coding", "tech_1", "tech_2", "behavioral", "completed"]
+PIPELINE = ["oa_mcq", "oa_coding", "tech_1", "tech_2", "completed"]
 
 async def get_session(session_id: int, db: AsyncSession):
     result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
@@ -36,8 +36,7 @@ async def advance_round_state(session_id: int, db: AsyncSession):
     
     # Strict Flow Definition
     # resume_analysis -> prep_oa -> oa_mcq -> prep_coding -> oa_coding -> 
-    # prep_tech_1 -> tech_1 -> prep_tech_2 -> tech_2 -> 
-    # prep_behavioral -> behavioral -> completed
+    # prep_tech_1 -> tech_1 -> prep_tech_2 -> tech_2 -> completed
 
     if current_round == "resume_analysis":
         session.current_round = "prep_oa"
@@ -56,10 +55,6 @@ async def advance_round_state(session_id: int, db: AsyncSession):
     elif current_round == "prep_tech_2":
         session.current_round = "tech_2"
     elif current_round == "tech_2":
-        session.current_round = "prep_behavioral"
-    elif current_round == "prep_behavioral":
-        session.current_round = "behavioral"
-    elif current_round == "behavioral":
         session.current_round = "completed"
         session.end_time = datetime.utcnow()
         session.status = "completed"

@@ -93,13 +93,6 @@ async def chat_endpoint(session_id: int, request: ChatRequest, db: AsyncSession 
             "Focus on scalability, database choices, caching, and load balancing. "
             "Alternatively, dig deep into a project from their resume."
         )
-    elif session.current_round == "behavioral":
-        system_prompt = (
-            f"{base_prompt} This is the Behavioral Round. "
-            "Ask questions using the STAR method (Situation, Task, Action, Result). "
-            "Focus on leadership, conflict resolution, and teamwork. "
-            "Example: 'Tell me about a time you had a conflict with a coworker.'"
-        )
     else:
         system_prompt = base_prompt
 

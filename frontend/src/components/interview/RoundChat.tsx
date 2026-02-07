@@ -28,7 +28,6 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
         let greeting = "";
         if (roundType === "tech_1") greeting = "Welcome to the Technical Round (DSA). explain your previous code or solve a new generic problem.";
         else if (roundType === "tech_2") greeting = "Welcome to the System Design Round. Tell me about the architecture of your last project.";
-        else if (roundType === "behavioral") greeting = "Welcome to the Behavioral Round. Tell me about a time you faced a challenge.";
 
         setMessages([{ role: 'ai', content: greeting }]);
     }, [roundType]);

@@ -51,8 +51,7 @@ class InterviewSession(Base):
     score = Column(Integer, default=0)
     
     # Valid States: resume_analysis -> prep_oa -> oa_mcq -> prep_coding -> oa_coding -> 
-    #               prep_tech_1 -> tech_1 -> prep_tech_2 -> tech_2 -> 
-    #               prep_behavioral -> behavioral -> completed
+    #               prep_tech_1 -> tech_1 -> prep_tech_2 -> tech_2 -> completed
     current_round = Column(String, default="resume_analysis") 
     round_data = Column(JSON, default={}) 
     
