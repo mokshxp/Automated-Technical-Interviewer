@@ -1,103 +1,213 @@
-# Automated Technical Interviewer
+# 🤖 Automated Technical Interviewer
 
-An AI-powered platform that conducts **resume-aware, adaptive technical interviews** using large language models.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688.svg)
+![React](https://img.shields.io/badge/React-18.2-61DAFB.svg)
+![AI](https://img.shields.io/badge/AI-Gemini%201.5%20Pro-8E44AD)
 
----
-
-## Problem
-
-Most technical interview platforms:
-
-- Rely on static question banks  
-- Ignore candidate background  
-- Test memorization more than real problem-solving  
-
-This results in interviews that feel artificial and low-signal.
+> **An AI-powered platform for conducting automated, adaptive technical interviews based on candidate resumes.**
 
 ---
 
-## Solution
+## 📚 Table of Contents
 
-This project focuses on simulating a **real technical screening round**, not a quiz.
-
-It emphasizes:
-
-- Resume-driven interviews  
-- Adaptive questioning  
-- Live reasoning and explanation  
-- End-to-end system evaluation  
-
----
-
-## Key Features
-
-- **Resume Analysis**  
-  Parses PDF/DOCX resumes to extract skills, projects, and experience.
-
-- **Adaptive AI Interviewer**  
-  Uses Gemini 1.5 Pro to generate follow-up questions based on candidate responses.
-
-- **Interactive Coding Environment**  
-  Browser-based code editor with server-side code execution.
-
-- **Voice Interaction**  
-  Text-to-Speech (TTS) and Speech-to-Text (STT) for conversational interviews.
-
-- **Multi-Round Assessment**  
-  MCQs, DSA coding, and System Design discussions.
-
-- **Automated Evaluation**  
-  AI-generated feedback and scoring (planned).
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Tech Stack](#-tech-stack)
+- [Getting Started](#-getting-started)
+- [Usage Guide](#-usage-guide)
+- [API Documentation](#-api-documentation)
+- [Project Structure](#-project-structure)
+- [Roadmap](#-roadmap)
 
 ---
 
-## High-Level Architecture
+## 🔍 Overview
 
+The **Automated Technical Interviewer** is designed to simulate a real technical screening round.
 
----
+Unlike traditional quiz-based platforms, this system:
+- Reads and understands resumes
+- Generates context-aware questions
+- Adapts follow-ups based on candidate responses
+- Evaluates problem-solving and reasoning, not memorization
 
-## Tech Stack
-
-### Backend
-- FastAPI (async Python)
-- Google Gemini 1.5 Pro
-- SQLAlchemy (SQLite / PostgreSQL)
-- JWT Authentication
-
-### Frontend
-- React + Vite
-- TypeScript
-- Monaco Code Editor
-- Tailwind CSS
+The platform uses **Google Gemini 1.5 Pro** to act as an intelligent interviewer across multiple interview rounds.
 
 ---
 
-## Running Locally
+## ✨ Key Features
 
-### Backend
+| Feature | Description |
+|------|-------------|
+| **Resume Analysis** | Parses PDF/DOCX resumes to extract skills, projects, and experience. |
+| **Adaptive AI Interviewer** | Dynamically generates follow-up questions using Gemini 1.5 Pro. |
+| **Interactive Coding Environment** | Browser-based code editor with server-side execution sandbox. |
+| **Voice Interaction** | Text-to-Speech (TTS) and Speech-to-Text (STT) support. |
+| **Multi-Round Assessment** | MCQs, DSA coding rounds, and system design discussions. |
+| **Automated Evaluation** | AI-generated feedback and scoring (planned). |
 
-```bash
-cd backend
+---
+
+## 🏗 System Architecture
+
+```mermaid
+graph TD
+    subgraph Frontend["Frontend (React + Vite)"]
+        UI[Web UI]
+        Editor[Code Editor]
+        Audio[Voice Input / Output]
+    end
+
+    subgraph Backend["Backend (FastAPI)"]
+        API[API Router]
+        Auth[JWT Auth]
+        Flow[Interview State Machine]
+        Sandbox[Code Sandbox]
+        LLM[LLM Service]
+    end
+
+    subgraph External["External Services"]
+        Gemini[Gemini 1.5 Pro API]
+        DB[(Database)]
+    end
+
+    UI --> API
+    Audio --> API
+    API --> Auth
+    API --> Flow
+    Flow --> LLM
+    Flow --> Sandbox
+    Flow --> DB
+    LLM --> Gemini
+🛠 Tech Stack
+Backend
+
+FastAPI (Async Python)
+
+Google Gemini 1.5 Pro
+
+SQLAlchemy (Async ORM)
+
+SQLite (Dev) / PostgreSQL (Prod)
+
+JWT Authentication
+
+gTTS (Text-to-Speech)
+
+Frontend
+
+React (Vite)
+
+TypeScript
+
+Tailwind CSS
+
+Monaco Code Editor
+
+Axios
+
+🚀 Getting Started
+Prerequisites
+
+Python 3.10+
+
+Node.js 16+
+
+npm
+
+Google Gemini API key
+
+Backend Setup
+git clone https://github.com/mokshxp/Automated-Technical-Interviewer.git
+cd Automated-Technical-Interviewer/backend
+
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
+
 pip install -r requirements.txt
+pip install aiosqlite
+
+
+Create .env file:
+
+GEMINI_API_KEY=your_api_key_here
+DATABASE_URL=sqlite+aiosqlite:///./interview.db
+
+
+Run server:
+
 uvicorn app.main:app --reload
 
----
 
-## Why this version works (important)
+API docs available at: http://localhost:8000/docs
 
-- Clean Markdown → GitHub renders it nicely  
-- Short sections → readable in 30 seconds  
-- No marketing fluff  
-- Sounds like a **real engineering project**  
-- Matches your current stage perfectly  
+Frontend Setup
+cd ../frontend
+npm install
+npm run dev
 
-This is the kind of README **reviewers actually read**.
 
-If you want next:
-- add screenshots (without ruining the look)
-- add a short “resume version”
-- or review your backend folder like a real code reviewer
+Application runs at: http://localhost:5173
 
-Just tell me.
+📘 Usage Guide
+
+Register as a candidate
+
+Upload resume (PDF/DOCX)
+
+Complete MCQ assessment
+
+Solve DSA coding problems
+
+Participate in system design discussion
+
+Review AI-generated feedback (planned)
+
+🔌 API Documentation
+Endpoint	Method	Description
+/auth/login	POST	Authenticate user
+/candidates/upload_resume	POST	Upload and parse resume
+/interview/{id}/state	GET	Get interview state
+/interview/{id}/chat	POST	Text-based interaction
+/interview/{id}/speak	POST	Voice interaction
+/interview/{id}/run_code	POST	Execute code in sandbox
+📂 Project Structure
+backend/
+ ├── app/
+ │   ├── routers/
+ │   ├── services/
+ │   ├── models.py
+ │   └── main.py
+ ├── requirements.txt
+ └── .env
+
+frontend/
+ ├── src/
+ │   ├── components/
+ │   ├── pages/
+ │   └── context/
+ └── package.json
+
+🗺 Roadmap
+
+ WebSocket support for real-time streaming
+
+ Multi-language code execution (Java, C++)
+
+ Automated interview feedback reports
+
+ Recruiter/admin dashboard
+
+ Proctoring and identity verification
+
+Built with ❤️ by Moksh Gupta
+
+
+
+
+
+
