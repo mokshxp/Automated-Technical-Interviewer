@@ -1,0 +1,47 @@
+from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from datetime import datetime
+from .database import Base
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    # candidates = relationship('Candidate', back_populates='user')
+
+class Candidate(Base):
+    __tablename__ = 'candidates'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    resume_url = Column(String, nullable=False)
+    resume_text = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True) 
+    # user = relationship('User', back_populates='candidates')
+
+class Question(Base):
+    __tablename__ = 'questions'
+    id = Column(Integer, primary_key=True, index=True)
+    text = Column(String, nullable=False)
+    options = Column(JSON, nullable=False)
+    correct_answer = Column(Integer, nullable=False)
+    difficulty = Column(String, default='medium')
+    tags = Column(JSON, default=[])
+    candidate_id = Column(Integer, ForeignKey('candidates.id'))
+
+class InterviewSession(Base):
+    __tablename__ = 'interview_sessions'
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey('candidates.id'))
+    status = Column(String, default='pending') 
+    score = Column(Integer, default=0)
+    current_round = Column(String, default='oa_mcq') 
+    round_data = Column(JSON, default={}) 
+    start_time = Column(DateTime, default=datetime.utcnow)
+    end_time = Column(DateTime, nullable=True)
+    # candidate = relationship('Candidate')
