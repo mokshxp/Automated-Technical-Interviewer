@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "D:\Automated Technical Interviewer\backend\app\routers\candidates.py", line 63, in register_candidate
+    generated_questions_data = generate_mcqs(resume_text)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Automated Technical Interviewer\backend\app\services\question_generator.py", line 69, in generate_mcqs
+    raise RuntimeError("Failed to generate 10 unique MCQs")
+RuntimeError: Failed to generate 10 unique MCQs

@@ -39,29 +39,29 @@ async def register_candidate(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Check if file is PDF
-    if resume.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    try:
+        # Check if file is PDF
+        if resume.content_type != "application/pdf":
+            raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 
-    # Save Resume File
-    upload_dir = "uploads/resumes"
-    os.makedirs(upload_dir, exist_ok=True)
-    file_location = f"{upload_dir}/{resume.filename}"
-    
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(resume.file, buffer)
+        # Save Resume File
+        upload_dir = "uploads/resumes"
+        os.makedirs(upload_dir, exist_ok=True)
+        file_location = f"{upload_dir}/{resume.filename}"
         
-    # Parse Resume
-    try:
-        resume_text = parse_resume(file_location)
-    except Exception as e:
-        print(f"Error parsing resume: {e}")
-        resume_text = ""
-    
-    # Generate Questions
-    generated_questions_data = generate_mcqs(resume_text)
-    
-    try:
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(resume.file, buffer)
+            
+        # Parse Resume
+        try:
+            resume_text = parse_resume(file_location)
+        except Exception as e:
+            print(f"Error parsing resume: {e}")
+            resume_text = ""
+        
+        # Generate Questions
+        generated_questions_data = generate_mcqs(resume_text)
+        
         # Check if candidate exists (Upsert Logic)
         result = await db.execute(select(Candidate).where(Candidate.email == current_user.email))
         existing = result.scalars().first()
@@ -126,7 +126,18 @@ async def register_candidate(
         await db.commit()
         await db.refresh(new_candidate)
 
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        try:
+            with open("backend_error.log", "w") as f:
+                f.write(error_msg)
+        except:
+            pass
+        print(f"CRITICAL ERROR: {error_msg}")
+        
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Registration error: {str(e)}")
 

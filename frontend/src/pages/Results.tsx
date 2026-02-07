@@ -3,14 +3,24 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckCircle, XCircle, BarChart as BarChartIcon, Home } from 'lucide-react';
 
+interface QuestionAnalysis {
+    question: string;
+    user_answer: string;
+    correct_answer: string;
+    is_correct: boolean;
+    difficulty: string;
+    tags: string[];
+}
+
 interface ResultsData {
     scores: {
         oa_mcq: { score: number; total: number };
         oa_coding: number;
         tech_1: number;
         tech_2: number;
-        behavioral: number;
+        // behavioral: number; // Removed
     };
+    questions_analysis?: QuestionAnalysis[];
     overall_status: string;
     feedback: string;
 }
@@ -78,15 +88,58 @@ export default function Results() {
                                         <span className="text-gray-600">Technical II (System Design)</span>
                                         <span className="font-bold text-gray-800">{results.scores.tech_2}/100</span>
                                     </div>
-                                    <div className="flex justify-between items-center bg-white p-3 rounded shadow-sm">
-                                        <span className="text-gray-600">Behavioral</span>
-                                        <span className="font-bold text-gray-800">{results.scores.behavioral}/100</span>
-                                    </div>
+                                    {/* Behavioral Removed */}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                {/* Detailed Answer Sheet */}
+                {results.questions_analysis && (
+                    <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+                        <div className="p-6 border-b border-gray-200">
+                            <h2 className="text-xl font-bold text-gray-800">Detailed Answer Sheet</h2>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            {results.questions_analysis.map((qa, idx) => (
+                                <div key={idx} className="p-6 hover:bg-gray-50 transition-colors">
+                                    <div className="flex gap-4">
+                                        <div className="mt-1">
+                                            {qa.is_correct ?
+                                                <CheckCircle className="text-green-500" size={24} /> :
+                                                <XCircle className="text-red-500" size={24} />
+                                            }
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-medium text-gray-900 mb-2">{idx + 1}. {qa.question}</p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                                <div className={`p-3 rounded-lg ${qa.is_correct ? 'bg-green-50 border border-green-100' : 'bg-red-50 border border-red-100'}`}>
+                                                    <span className="block text-xs font-semibold uppercase tracking-wider mb-1 opacity-70">Your Answer</span>
+                                                    <span className={qa.is_correct ? 'text-green-800' : 'text-red-800'}>{qa.user_answer}</span>
+                                                </div>
+                                                {!qa.is_correct && (
+                                                    <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                                                        <span className="block text-xs font-semibold uppercase tracking-wider mb-1 opacity-70">Correct Answer</span>
+                                                        <span className="text-gray-800">{qa.correct_answer}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="mt-2 flex gap-2">
+                                                {qa.tags && qa.tags.map(tag => (
+                                                    <span key={tag} className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">{tag}</span>
+                                                ))}
+                                                <span className={`text-xs px-2 py-1 rounded-full ${qa.difficulty === 'easy' ? 'bg-green-100 text-green-700' : qa.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {qa.difficulty}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="text-center">
                     <button

@@ -1,6 +1,7 @@
 import google.generativeai as genai
 import os
 import json
+import traceback
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,9 +13,8 @@ if GEMINI_API_KEY:
 else:
     print("Warning: GEMINI_API_KEY not found in environment variables.")
 
-# Use a model that supports JSON mode if possible, or just standard pro.
-# gemini-pro is standard text.
-MODEL_NAME = 'gemini-pro'
+# Use a newer model
+MODEL_NAME = 'gemini-flash-latest'
 
 def generate_text(prompt: str) -> str:
     if not GEMINI_API_KEY:
@@ -26,6 +26,7 @@ def generate_text(prompt: str) -> str:
         return response.text
     except Exception as e:
         print(f"Gemini API Error: {e}")
+        traceback.print_exc()
         return "Sorry, I am having trouble thinking right now."
 
 def generate_json(prompt: str) -> dict:
@@ -86,4 +87,5 @@ def generate_json(prompt: str) -> dict:
         return []
     except Exception as e:
         print(f"Gemini JSON Error: {e}")
+        traceback.print_exc()
         return {}

@@ -8,17 +8,22 @@ interface Props {
     onComplete: () => void;
 }
 
+import { useProctoring } from '../../hooks/useProctoring';
+
 interface Message {
     role: 'user' | 'ai';
     content: string;
     audioUrl?: string;
 }
 
+import SystemDesignVoiceMode from './SystemDesignVoiceMode';
+
 export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+    const [voiceMode, setVoiceMode] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -32,9 +37,20 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
         setMessages([{ role: 'ai', content: greeting }]);
     }, [roundType]);
 
+    // ... (rest of existing logic)
+
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
+
+    // Cleanup MediaStream on unmount
+    useEffect(() => {
+        return () => {
+            if (mediaRecorderRef.current) {
+                mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
 
     const playAudio = (url: string) => {
         const audio = new Audio(url);
@@ -55,9 +71,6 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
                 message: userMsg
             });
             setMessages(prev => [...prev, { role: 'ai', content: response.data.response }]);
-
-            // Note: Regular chat doesn't return audio URL currently, but we could add it.
-            // For now, voice mode uses /speak which returns audio.
         } catch (error) {
             console.error("Chat Error", error);
         } finally {
@@ -89,7 +102,6 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
     const stopRecording = () => {
         mediaRecorderRef.current?.stop();
         setIsRecording(false);
-        // Stop all tracks to release mic
         mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
     };
 
@@ -102,8 +114,7 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
 
         setLoading(true);
         try {
-            // Optimistic UI
-            setMessages(prev => [...prev, { role: 'user', content: "(Voice Message sent...)" }]);
+            setMessages(prev => [...prev, { role: 'user', content: "🎤 (Audio Input Sent)" }]);
 
             const response = await axios.post(`http://localhost:8000/interview/${sessionId}/speak`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -111,26 +122,11 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
 
             const { text, audio_url } = response.data;
 
-            // Replace placeholder or add new
-            setMessages(prev => {
-                const newHistory = [...prev];
-                // Update last user message
-                newHistory[newHistory.length - 1].content = `(Voice) ${text}`; // Or show what AI heard? AI response is 'text' which is the ANSWER. 
-                // Wait, response.data.text is the AI RESPONSE text.
-                // The prompt said "You are an interviewer... Respond...".
-                // So text is AI's answer.
-                // We should probably just append the AI answer.
-
-                // Let's remove the "Voice Message sent" placeholder and properly append context if possible, 
-                // but for now let's just append AI response.
-
-                // Better approach:
-                return [
-                    ...prev.slice(0, -1), // Remove placeholder
-                    { role: 'user', content: "🎤 (Audio Input Sent)" },
-                    { role: 'ai', content: text, audioUrl: audio_url }
-                ];
-            });
+            setMessages(prev => [
+                ...prev.slice(0, -1),
+                { role: 'user', content: "🎤 (Audio Input Sent)" },
+                { role: 'ai', content: text, audioUrl: audio_url }
+            ]);
 
             if (audio_url) playAudio(audio_url);
 
@@ -153,8 +149,26 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
         }
     };
 
+    const { warning } = useProctoring({
+        onTerminate: () => {
+            alert("Interview Terminated due to violations.");
+            handleNextRound();
+        },
+        enable: !voiceMode
+    });
+
+    if (voiceMode && roundType === 'tech_2') {
+        return <SystemDesignVoiceMode onComplete={onComplete} />;
+    }
+
     return (
-        <div className="flex flex-col h-screen bg-gray-50">
+        <div className="flex flex-col h-screen bg-gray-50 relative">
+            {warning && (
+                <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-bounce">
+                    <span className="text-2xl">⚠️</span>
+                    <span className="font-bold">{warning}</span>
+                </div>
+            )}
             <header className="bg-white shadow p-4 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                     <h2 className="text-xl font-bold capitalize text-indigo-700">
@@ -162,12 +176,22 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
                     </h2>
                     {isRecording && <span className="flex h-3 w-3 rounded-full bg-red-500 animate-pulse" />}
                 </div>
-                <button
-                    onClick={handleNextRound}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700"
-                >
-                    Finish Round
-                </button>
+                <div className="flex gap-2">
+                    {roundType === 'tech_2' && (
+                        <button
+                            onClick={() => setVoiceMode(true)}
+                            className="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-purple-700 flex items-center gap-2"
+                        >
+                            <Mic size={16} /> Voice Mode
+                        </button>
+                    )}
+                    <button
+                        onClick={handleNextRound}
+                        className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700"
+                    >
+                        Finish Round
+                    </button>
+                </div>
             </header>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">

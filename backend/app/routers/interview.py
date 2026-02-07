@@ -32,10 +32,23 @@ class RoundSubmission(BaseModel):
 
 @router.get("/{session_id}/state")
 async def get_interview_state(session_id: int, db: AsyncSession = Depends(get_db)):
-    state = await get_round_state(session_id, db)
-    if "error" in state:
-        raise HTTPException(status_code=404, detail=state["error"])
-    return state
+    try:
+        state = await get_round_state(session_id, db)
+        if "error" in state:
+            raise HTTPException(status_code=404, detail=state["error"])
+        return state
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        try:
+            with open("backend_error.log", "w") as f:
+                f.write(error_msg)
+        except:
+            pass
+        print(f"CRITICAL ERROR in get_interview_state: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @router.post("/{session_id}/advance")
 async def advance_interview_round(session_id: int, db: AsyncSession = Depends(get_db)):
@@ -243,9 +256,11 @@ async def speak_endpoint(session_id: int, audio: UploadFile = File(...), db: Asy
         
     # 2. Process with Gemini (Multimodal)
     try:
+        print(f"DEBUG: Starting Gemini processing for {user_filename}")
         # Upload to Gemini File API
         # Note: In a real app, you might want to reuse the file or delete it later
         user_audio_file = genai.upload_file(user_filepath)
+        print(f"DEBUG: File uploaded to Gemini: {user_audio_file}")
         
         # Get Chat History (Context)
         result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
@@ -265,17 +280,23 @@ async def speak_endpoint(session_id: int, audio: UploadFile = File(...), db: Asy
             f"\n\nContext:\n{history_context}"
         )
         
-        model = genai.GenerativeModel("models/gemini-pro-latest")
+        print("DEBUG: Generating content with Gemini...")
+        model = genai.GenerativeModel("gemini-1.5-flash") # Check model name!
+        # gemini-1.5-flash is often safer/faster. gemini-pro-latest might be deprecated or require 1.5.
+        # Let's try "gemini-1.5-flash" if this fails, or "gemini-pro".
         result = model.generate_content([prompt, user_audio_file])
         
         ai_text = result.text
+        print(f"DEBUG: AI Response: {ai_text}")
         
         # 3. Text to Speech
         tts_filename = f"{session_id}_{uuid.uuid4()}_ai.mp3"
         tts_filepath = os.path.join(upload_dir, tts_filename)
         
+        print(f"DEBUG: Generating TTS to {tts_filepath}")
         tts = gTTS(text=ai_text, lang='en')
         tts.save(tts_filepath)
+        print("DEBUG: TTS saved successfully")
         
         # Save transcript
         if session:
@@ -303,6 +324,8 @@ async def speak_endpoint(session_id: int, audio: UploadFile = File(...), db: Asy
         }
         
     except Exception as e:
-        print(f"Error in /speak: {e}")
+        print(f"CRITICAL ERROR in /speak: {e}")
+        import traceback
+        traceback.print_exc()
         # Fallback if Gemini fails (e.g. file upload error)
         raise HTTPException(status_code=500, detail=str(e))

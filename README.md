@@ -211,6 +211,7 @@ Follow these steps to set up the project locally.
 │   ├── src/
 │   │   ├── components/
 │   │   │   └── interview/  # Interview specific UI components
+
 │   │   ├── pages/          # Full page layouts
 │   │   └── context/        # Global state
 │   └── package.json

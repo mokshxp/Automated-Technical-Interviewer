@@ -3,7 +3,18 @@ from sqlalchemy.future import select
 from ..models import InterviewSession, Question, Candidate
 from datetime import datetime
 
-PIPELINE = ["oa_mcq", "oa_coding", "tech_1", "tech_2", "completed"]
+PIPELINE = [
+    "resume_analysis", 
+    "prep_oa", 
+    "oa_mcq", 
+    "prep_coding", 
+    "oa_coding", 
+    "prep_tech_1", 
+    "tech_1", 
+    "prep_tech_2", 
+    "tech_2", 
+    "completed"
+]
 
 async def get_session(session_id: int, db: AsyncSession):
     result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
