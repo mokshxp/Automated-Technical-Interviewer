@@ -35,7 +35,6 @@ async def calculate_final_results(session_id: int, db: AsyncSession):
     # In a real system, we would run an evaluation prompt here.
     tech_1_score = 85 # Placeholder
     tech_2_score = 90 # Placeholder
-    behavioral_score = 88 # Placeholder
     
     # Transcript Summarizer (Simple concatenation for MVP)
     # ...
@@ -47,8 +46,7 @@ async def calculate_final_results(session_id: int, db: AsyncSession):
             "oa_mcq": {"score": mcq_score, "total": total_mcq},
             "oa_coding": coding_score,
             "tech_1": tech_1_score,
-            "tech_2": tech_2_score,
-            "behavioral": behavioral_score
+            "tech_2": tech_2_score
         },
         "overall_status": "Strong Hire" if (coding_passed and mcq_score > total_mcq * 0.7) else "Reject",
         "feedback": "Candidate showed strong problem solving skills."

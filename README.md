@@ -11,7 +11,7 @@
 
 ---
 
-## � Table of Contents
+## 📖 Table of Contents
 
 - [Overview](#-overview)
 - [Key Features](#-key-features)
@@ -24,7 +24,7 @@
 - [Usage Guide](#-usage-guide)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
-- [Troubleshooting](#-troubleshooting)
+
 - [Roadmap](#-roadmap)
 
 ---
@@ -99,7 +99,7 @@ graph TD
 
 ---
 
-## � Getting Started
+## 🚀 Getting Started
 
 Follow these steps to set up the project locally.
 
@@ -168,7 +168,7 @@ Follow these steps to set up the project locally.
 
 ---
 
-## � Usage Guide
+## 📖 Usage Guide
 
 1.  **Registration**: Sign up as a new candidate on the landing page.
 2.  **Resume Upload**: Upload your resume (PDF/DOCX) to initialize the session.
@@ -215,8 +215,6 @@ Follow these steps to set up the project locally.
 │   │   └── context/        # Global state
 │   └── package.json
 ```
-
----
 
 
 
