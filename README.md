@@ -218,11 +218,7 @@ Follow these steps to set up the project locally.
 
 ---
 
-## ❓ Troubleshooting
 
--   **`socket.gaierror` on Startup**: Check logic in `database.py`. Ensure `.env` is loaded *before* `DATABASE_URL` is accessed.
--   **Gemini 404 Error**: Verify your API key and ensure the model `models/gemini-pro-latest` or `gemini-1.5-pro` is available in your region.
--   **Database Locks**: If using SQLite, avoid opening the database file in other viewers while the app is writing.
 
 ## 🗺 Roadmap
 
