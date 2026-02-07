@@ -24,7 +24,7 @@
 - [Usage Guide](#-usage-guide)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
-- [Troubleshooting](#-troubleshooting)
+
 - [Roadmap](#-roadmap)
 
 ---
@@ -215,8 +215,6 @@ Follow these steps to set up the project locally.
 │   │   └── context/        # Global state
 │   └── package.json
 ```
-
----
 
 
 
