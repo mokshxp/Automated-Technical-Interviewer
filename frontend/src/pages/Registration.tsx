@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Upload, CheckCircle, AlertCircle, FileText, ArrowRight, Code, Mic, Zap } from 'lucide-react';
@@ -14,13 +14,15 @@ export default function Registration() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!file) {
-            alert("Please upload a resume");
+            setStatus('error');
+            setMessage("Please upload a resume");
             return;
         }
 
         setStatus('loading');
         const formData = new FormData();
         formData.append('resume', file);
+        formData.append('name', 'Interview Candidate');
 
         try {
             const response = await fetch('http://localhost:8000/candidates/register', {
@@ -37,11 +39,33 @@ export default function Registration() {
             }
 
             const data = await response.json();
+
+            // STEP 2: Create Interview Session
+            // The registration only creates the resume. We must now explicitly start a session.
+            const sessionResponse = await fetch('http://localhost:8000/interviews/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ resume_id: data.id })
+            });
+
+            if (!sessionResponse.ok) {
+                throw new Error("Failed to initialize interview session");
+            }
+
+            const sessionData = await sessionResponse.json();
+
+            if (!sessionData.session_id) {
+                throw new Error("Invalid server response: Missing session ID");
+            }
+
             setStatus('success');
 
             // Artificial delay for animation
             setTimeout(() => {
-                navigate(`/interview/${data.session_id}`);
+                navigate(`/interview/${sessionData.session_id}`);
             }, 1000);
         } catch (error: any) {
             setStatus('error');
@@ -83,10 +107,19 @@ export default function Registration() {
         }
     };
 
+    useEffect(() => {
+        // Fix for layout gap: ensure we start at the top and lock body overflow
+        window.scrollTo(0, 0);
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, []);
+
     return (
-        <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 md:p-8 font-sans selection:bg-indigo-500/30 overflow-hidden relative">
+        <div className="min-h-screen w-full bg-zinc-950 flex items-center justify-center p-4 md:p-8 font-sans selection:bg-indigo-500/30 relative overflow-x-hidden">
             {/* Background Effects */}
-            <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse-slow" />
+            <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse-slow font-sans" />
             <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse-slow delay-1000" />
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-soft-light" />
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
@@ -95,11 +128,11 @@ export default function Registration() {
                 initial="hidden"
                 animate="visible"
                 variants={containerVariants}
-                className="max-w-5xl w-full bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px] relative z-10"
+                className="max-w-5xl w-full bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10"
             >
                 {/* LEFT COLUMN: Upload Section */}
                 <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center relative">
-                    <div className="max-w-sm mx-auto w-full">
+                    <div className="max-w-sm mx-auto w-full py-4">
                         <motion.div variants={itemVariants}>
                             <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mb-6 border border-white/5 shadow-inner">
                                 <Upload className="text-indigo-400" size={24} />
@@ -108,10 +141,10 @@ export default function Registration() {
                             <p className="text-zinc-400 mb-8 leading-relaxed">Upload your resume to let our AI customize technical questions specifically for your stack.</p>
                         </motion.div>
 
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                             <motion.div variants={itemVariants}>
                                 <div
-                                    className={`relative group border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 ${file ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-zinc-700 hover:border-indigo-500/30 hover:bg-zinc-800/50'}`}
+                                    className={`relative group border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-300 ${file ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-zinc-700 hover:border-indigo-500/30 hover:bg-zinc-800/50'}`}
                                     onClick={() => document.getElementById('file-upload')?.click()}
                                 >
                                     <input
@@ -123,38 +156,48 @@ export default function Registration() {
                                     />
 
                                     <div className="flex flex-col items-center">
-                                        <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-all duration-300 ${file ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'bg-zinc-800 text-zinc-500 group-hover:scale-110 group-hover:bg-zinc-700 group-hover:text-zinc-300'}`}>
-                                            {file ? <FileText size={24} /> : <Upload size={24} />}
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all duration-300 ${file ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'bg-zinc-800 text-zinc-500 group-hover:scale-110 group-hover:bg-zinc-700 group-hover:text-zinc-300'}`}>
+                                            {file ? <FileText size={20} /> : <Upload size={20} />}
                                         </div>
                                         {file ? (
-                                            <div>
-                                                <p className="font-semibold text-white">{file.name}</p>
-                                                <p className="text-xs text-indigo-400 mt-1 font-medium">Ready to upload</p>
+                                            <div className="max-w-full px-2">
+                                                <p className="font-semibold text-white truncate text-sm">{file.name}</p>
+                                                <p className="text-[10px] text-indigo-400 mt-0.5 font-medium uppercase tracking-wider">Ready to upload</p>
                                             </div>
                                         ) : (
                                             <div>
-                                                <p className="font-medium text-zinc-200">Click or drag resume here</p>
-                                                <p className="text-xs text-zinc-500 mt-1 uppercase tracking-wider">PDF or DOCX (Max 10MB)</p>
+                                                <p className="text-sm font-medium text-zinc-200">Click or drag resume</p>
+                                                <p className="text-[10px] text-zinc-500 mt-0.5 uppercase tracking-wider">PDF or DOCX (10MB)</p>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </motion.div>
 
-                            {/* Status Messages */}
-                            {status === 'error' && (
-                                <motion.div variants={itemVariants} className="bg-red-500/10 border border-red-500/20 text-red-200 p-4 rounded-xl flex items-center gap-3">
-                                    <AlertCircle size={20} className="text-red-400" />
-                                    <span className="text-sm font-medium">{message}</span>
-                                </motion.div>
-                            )}
+                            {/* Status Messages - Combined to prevent multiple gaps */}
+                            <div className="min-h-0 flex flex-col gap-2">
+                                {status === 'error' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="bg-red-500/10 border border-red-500/20 text-red-200 p-3 rounded-xl flex items-center gap-3"
+                                    >
+                                        <AlertCircle size={18} className="text-red-400 shrink-0" />
+                                        <span className="text-xs font-medium leading-tight">{message}</span>
+                                    </motion.div>
+                                )}
 
-                            {status === 'success' && (
-                                <motion.div variants={itemVariants} className="bg-green-500/10 border border-green-500/20 text-green-200 p-4 rounded-xl flex items-center gap-3">
-                                    <CheckCircle size={20} className="text-green-400" />
-                                    <span className="text-sm font-medium">Resume parsed! Setting up interview...</span>
-                                </motion.div>
-                            )}
+                                {status === 'success' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="bg-green-500/10 border border-green-500/20 text-green-200 p-3 rounded-xl flex items-center gap-3"
+                                    >
+                                        <CheckCircle size={18} className="text-green-400 shrink-0" />
+                                        <span className="text-xs font-medium leading-tight">Resume parsed! Setting up interview...</span>
+                                    </motion.div>
+                                )}
+                            </div>
 
                             <motion.button
                                 variants={itemVariants}

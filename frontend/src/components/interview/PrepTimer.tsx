@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Timer from '../common/Timer';
+import { ChevronRight } from 'lucide-react';
 
 interface PrepTimerProps {
     duration: number; // in seconds
@@ -15,83 +17,60 @@ export default function PrepTimer({ duration, message, onComplete }: PrepTimerPr
             onComplete();
             return;
         }
-
         const timer = setInterval(() => {
             setTimeLeft(prev => prev - 1);
         }, 1000);
-
         return () => clearInterval(timer);
     }, [timeLeft, onComplete]);
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    };
-
     return (
-        <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute top-0 left-0 w-full h-full opacity-20">
-                <div className="absolute top-[20%] left-[20%] w-96 h-96 bg-indigo-600 rounded-full blur-[100px]" />
-                <div className="absolute bottom-[20%] right-[20%] w-96 h-96 bg-purple-600 rounded-full blur-[100px]" />
-            </div>
-
+        <div className="min-h-full w-full flex items-center justify-center bg-zinc-950 text-white selection:bg-zinc-800">
             <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="z-10 text-center space-y-8"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="w-full max-w-[420px] bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-8 shadow-2xl backdrop-blur-sm"
             >
-                <h2 className="text-3xl font-light text-indigo-300">Prepare Yourself</h2>
+                <div className="flex flex-col items-center text-center space-y-6">
 
-                <p className="text-xl max-w-md mx-auto leading-relaxed text-gray-300">
-                    {message}
-                </p>
-
-                <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
-                    {/* Ring Animation */}
-                    <svg className="absolute w-full h-full transform -rotate-90">
-                        <circle
-                            cx="96"
-                            cy="96"
-                            r="88"
-                            stroke="currentColor"
-                            strokeWidth="8"
-                            fill="transparent"
-                            className="text-gray-800"
-                        />
-                        <motion.circle
-                            cx="96"
-                            cy="96"
-                            r="88"
-                            stroke="currentColor"
-                            strokeWidth="8"
-                            fill="transparent"
-                            className="text-indigo-500"
-                            strokeDasharray={2 * Math.PI * 88}
-                            strokeDashoffset={2 * Math.PI * 88 * (1 - timeLeft / duration)}
-                            strokeLinecap="round"
-                        />
-                    </svg>
-
-                    <div className="text-5xl font-mono font-bold flex items-center gap-2">
-                        {formatTime(timeLeft)}
+                    {/* Status Header */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold cursor-default">System Status: Ready</span>
+                        </div>
+                        <h2 className="text-xl font-semibold tracking-tight text-zinc-100">
+                            Session Initializing
+                        </h2>
+                        <p className="text-sm text-zinc-400 max-w-[280px] mx-auto leading-relaxed">
+                            {message}
+                        </p>
                     </div>
-                </div>
 
-                <div className="flex justify-center">
+                    {/* Timer Section */}
+                    <div className="py-4 border-y border-zinc-800/50 w-full flex justify-center bg-zinc-900/30">
+                        <Timer
+                            duration={duration}
+                            remaining={timeLeft}
+                            size="md"
+                            label="Auto-Start In"
+                        />
+                    </div>
+
+                    {/* Primary Action */}
                     <button
                         onClick={onComplete}
-                        className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full text-sm uppercase tracking-wider transition-colors border border-gray-700"
+                        className="group w-full bg-zinc-100 hover:bg-white text-zinc-900 font-medium py-3 rounded-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-zinc-900/20"
                     >
-                        Skip Waiting & Start Now
+                        Start Interview Now
+                        <ChevronRight size={16} className="text-zinc-600 group-hover:translate-x-0.5 transition-transform" />
                     </button>
-                </div>
 
-                <p className="text-sm text-gray-500 uppercase tracking-widest animate-pulse">
-                    Use this time to breathe and focus
-                </p>
+                    {/* Footer Info */}
+                    <div className="text-[10px] text-zinc-600 font-mono">
+                        ID: {Math.random().toString(36).substr(2, 9).toUpperCase()} // SECURE_MODE_ACTIVE
+                    </div>
+                </div>
             </motion.div>
         </div>
     );

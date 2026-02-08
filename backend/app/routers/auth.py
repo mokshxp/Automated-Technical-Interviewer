@@ -5,8 +5,9 @@ from sqlalchemy.future import select
 from pydantic import BaseModel, EmailStr
 from jose import JWTError, jwt
 from ..database import get_db
-from ..models import User, Candidate
+from ..models import User, Candidate, Subscription
 from ..utils import verify_password, get_password_hash, create_access_token, SECRET_KEY, ALGORITHM
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -29,6 +30,19 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class SubscriptionResponse(BaseModel):
+    plan_type: str
+    billing_interval: str
+    start_date: datetime
+    end_date: datetime
+    status: str
+
+    class Config:
+        from_attributes = True
+
+class UpgradeRequest(BaseModel):
+    interval: str # "weekly", "monthly", "yearly"
 
 # Dependency to get current user
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
@@ -105,3 +119,54 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.get("/me/subscription", response_model=SubscriptionResponse)
+async def get_my_subscription(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Subscription).where(Subscription.user_id == current_user.id))
+    subscription = result.scalars().first()
+    
+    if not subscription:
+        # Return a "free" or empty status instead of 404
+        return {
+            "plan_type": "free",
+            "billing_interval": "none",
+            "start_date": datetime.utcnow(),
+            "end_date": datetime.utcnow(),
+            "status": "inactive"
+        }
+    return subscription
+
+@router.post("/upgrade")
+async def upgrade_account(
+    request: UpgradeRequest, 
+    current_user: User = Depends(get_current_user), 
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        # Calculate end date based on interval
+        days = 7 if request.interval == "weekly" else (30 if request.interval == "monthly" else 365)
+        end_date = datetime.utcnow() + timedelta(days=days)
+
+        # Check existing
+        result = await db.execute(select(Subscription).where(Subscription.user_id == current_user.id))
+        subscription = result.scalars().first()
+
+        if subscription:
+            subscription.billing_interval = request.interval
+            subscription.end_date = end_date
+            subscription.status = "active"
+        else:
+            new_sub = Subscription(
+                user_id=current_user.id,
+                plan_type="premium",
+                billing_interval=request.interval,
+                end_date=end_date,
+                status="active"
+            )
+            db.add(new_sub)
+        
+        await db.commit()
+        return {"status": "success", "message": f"Upgraded to premium ({request.interval})"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

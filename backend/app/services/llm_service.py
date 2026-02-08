@@ -14,15 +14,17 @@ else:
     print("Warning: GEMINI_API_KEY not found in environment variables.")
 
 # Use a newer model
-MODEL_NAME = 'gemini-flash-latest'
+MODEL_NAME = 'models/gemini-1.5-flash'
 
 def generate_text(prompt: str) -> str:
     if not GEMINI_API_KEY:
         return "LLM Service Unavailable: Missing API Key."
     
     try:
+        print(f"DEBUG: Generating text with model {MODEL_NAME}...")
         model = genai.GenerativeModel(MODEL_NAME)
         response = model.generate_content(prompt)
+        print("DEBUG: Generation complete.")
         return response.text
     except Exception as e:
         print(f"Gemini API Error: {e}")

@@ -16,7 +16,7 @@ export default function SystemDesignVoiceMode({ onComplete }: SystemDesignVoiceM
 
     const { warning } = useProctoring({
         onTerminate: () => {
-            alert("Interview Terminated due to violations.");
+            console.log("Interview Terminated due to violations.");
             onComplete();
         },
         enable: true
@@ -58,7 +58,7 @@ export default function SystemDesignVoiceMode({ onComplete }: SystemDesignVoiceM
 
     const listen = () => {
         if (!('webkitSpeechRecognition' in window)) {
-            alert("Browser does not support Speech Recognition");
+            console.error("Browser does not support Speech Recognition");
             return;
         }
 

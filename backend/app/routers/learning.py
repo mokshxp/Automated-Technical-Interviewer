@@ -32,5 +32,6 @@ async def learning_chat(request: LearningChatRequest, db: AsyncSession = Depends
         "Coach Response:"
     )
 
-    response = generate_text(prompt)
+    from fastapi.concurrency import run_in_threadpool
+    response = await run_in_threadpool(generate_text, prompt)
     return {"response": response}

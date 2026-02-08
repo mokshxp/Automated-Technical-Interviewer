@@ -35,7 +35,8 @@ export default function Interview() {
 
     const startListening = () => {
         if (!('webkitSpeechRecognition' in window)) {
-            alert("Web Speech API not supported. Please use Chrome.");
+            console.error("Web Speech API not supported");
+            setMessages(prev => [...prev, { role: 'ai', content: "⚠️ System: Web Speech API not supported in this browser. Please use Chrome." }]);
             return;
         }
 
@@ -196,8 +197,8 @@ export default function Interview() {
                                 type="button"
                                 onClick={toggleListening}
                                 className={`p-2 rounded-full transition-colors ${isListening
-                                        ? 'bg-red-100 text-red-600 animate-pulse'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-red-100 text-red-600 animate-pulse'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
                                 title="Speak answer"
                             >

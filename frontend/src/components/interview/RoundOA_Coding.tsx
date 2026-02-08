@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
-import { Play, Loader, Clock } from 'lucide-react';
+import { Play, Loader } from 'lucide-react';
+import Timer from '../common/Timer';
+import { useProctoring } from '../../hooks/useProctoring';
 
 interface Props {
     sessionId: string;
@@ -27,9 +29,8 @@ const LANGUAGES = [
     { id: 'typescript', name: 'TypeScript' }
 ];
 
-import { useProctoring } from '../../hooks/useProctoring';
-
 export default function RoundOA_Coding({ sessionId, onComplete }: Props) {
+    // ... (state remains same)
     const [problem, setProblem] = useState<Problem | null>(null);
     const [language, setLanguage] = useState("python");
     const [code, setCode] = useState("");
@@ -37,24 +38,24 @@ export default function RoundOA_Coding({ sessionId, onComplete }: Props) {
     const [running, setRunning] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
+    const [timeLeft, setTimeLeft] = useState(30 * 60);
 
     const handleForceSubmit = async () => {
+        // ... (existing logic)
         if (!problem) return;
         setSubmitting(true);
         try {
-            // Force submit with current code
             await axios.post(`http://localhost:8000/interview/${sessionId}/coding/submit`, {
                 language,
                 code
             }, {
                 params: { problem_id: problem.problem_id }
             });
-            alert("Interview Terminated. Submitting current progress.");
+            console.log("Interview Terminated. Submitting current progress.");
             onComplete();
         } catch (e) {
             console.error("Force submit failed", e);
-            onComplete(); // Move on anyway
+            onComplete();
         }
     };
 
@@ -63,7 +64,8 @@ export default function RoundOA_Coding({ sessionId, onComplete }: Props) {
         enable: !!problem && !submitting
     });
 
-    // Default starter codes for known problems (since DB only has Python)
+    // ... (rest of logic: getStarterCode, useEffects)
+
     const getStarterCode = (lang: string, prob: Problem) => {
         if (lang === 'python') return prob.starter_code;
 
@@ -88,11 +90,9 @@ export default function RoundOA_Coding({ sessionId, onComplete }: Props) {
     };
 
     useEffect(() => {
-        // Fetch Problem
         axios.get(`http://localhost:8000/interview/${sessionId}/coding/problem`)
             .then(res => {
                 setProblem(res.data);
-                // Set initial code for default language (Python)
                 setCode(res.data.starter_code);
             })
             .catch(err => {
@@ -102,30 +102,21 @@ export default function RoundOA_Coding({ sessionId, onComplete }: Props) {
             .finally(() => setLoading(false));
     }, [sessionId]);
 
-    // Timer Effect
     useEffect(() => {
         if (loading || !problem) return;
-
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    alert("Time is up! Submitting your solution.");
-                    handleSubmit(); // Auto-submit
+                    console.log("Time is up! Submitting your solution.");
+                    handleSubmit();
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
-
         return () => clearInterval(timer);
     }, [loading, problem]);
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
 
     const handleLanguageChange = (newLang: string) => {
         setLanguage(newLang);
@@ -173,29 +164,24 @@ export default function RoundOA_Coding({ sessionId, onComplete }: Props) {
             const passed = response.data.passed;
 
             if (!passed) {
-                const confirmed = window.confirm("Some test cases failed. Do you want to submit anyway?");
-                if (!confirmed) {
-                    setOutput(resultOutput + "\n\n[System] logic check failed. You cancelled submission.");
-                    setSubmitting(false);
-                    return;
-                }
+                setOutput(prev => prev + "\n\n[System] Warning: Some test cases failed. Submitting anyway...");
             }
 
-            // Success or Forced Submission
-            alert(passed ? "All Test Cases Passed! Moving to next round." : "Solution Submitted (with failures). Moving to next round.");
+            console.log(passed ? "All Test Cases Passed" : "Submitted with failures");
             onComplete();
         } catch (error) {
             console.error("Submission failed", error);
-            alert("Submission failed error.");
+            setOutput(prev => prev + "\n[System] Error: Submission failed. Please try again.");
             setSubmitting(false);
         }
     };
+
 
     if (loading) return <div className="h-full flex items-center justify-center">Loading Problem...</div>;
     if (!problem) return <div className="h-full flex items-center justify-center text-red-500">Failed to load coding problem.</div>;
 
     return (
-        <div className="flex flex-col h-screen bg-gray-100 relative">
+        <div className="flex flex-col min-h-full w-full bg-gray-100 relative overflow-hidden">
             {warning && (
                 <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-bounce">
                     <span className="text-2xl">⚠️</span>
@@ -216,9 +202,13 @@ export default function RoundOA_Coding({ sessionId, onComplete }: Props) {
                     </select>
                 </div>
 
-                <div className="flex items-center gap-2 text-gray-700 font-mono text-lg bg-gray-100 px-3 py-1 rounded">
-                    <Clock size={20} />
-                    <span>{formatTime(timeLeft)}</span>
+                <div className="bg-zinc-900 rounded-xl p-2 shadow-lg flex items-center justify-center">
+                    <Timer
+                        duration={30 * 60}
+                        remaining={timeLeft}
+                        size="sm"
+                        showTrack={false}
+                    />
                 </div>
 
                 <div className="flex gap-2">

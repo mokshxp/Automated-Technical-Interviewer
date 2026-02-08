@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Loader } from 'lucide-react';
+import Timer from '../common/Timer';
 
 interface Question {
     text: string;
@@ -8,13 +9,13 @@ interface Question {
     correct_answer: number;
     id: number;
 }
-
 interface Props {
     sessionId: string;
     onComplete: () => void;
 }
 
 export default function RoundOA_MCQ({ sessionId, onComplete }: Props) {
+    // ... (state remains same)
     const [questions, setQuestions] = useState<Question[]>([]);
     const [answers, setAnswers] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(true);
@@ -22,20 +23,17 @@ export default function RoundOA_MCQ({ sessionId, onComplete }: Props) {
     const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes
     const [currentIndex, setCurrentIndex] = useState(0);
 
+    // ... (existing useEffects and handlers)
+
     useEffect(() => {
         // Fetch questions linked to SESSION (Strict)
         axios.get(`http://localhost:8000/interview/${sessionId}/questions`)
             .then(res => {
-                // Shuffle logic if desired, or trust backend. 
-                // User asked for "Frontend shuffle" implicitly or explicitly? 
-                // "Frontend: const shuffled = questions.sort..."
-                // let's shuffle here to be safe and immediate
                 const shuffled = res.data.sort(() => Math.random() - 0.5);
                 setQuestions(shuffled);
             })
             .catch(err => {
                 console.error(err);
-                alert("Failed to load session questions.");
             })
             .finally(() => setLoading(false));
     }, [sessionId]);
@@ -56,11 +54,7 @@ export default function RoundOA_MCQ({ sessionId, onComplete }: Props) {
         return () => clearInterval(timer);
     }, [loading, submitting]);
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    };
+    // ... (rest of logic)
 
     const handleAnswer = (qId: number, optionIdx: number) => {
         setAnswers(prev => ({ ...prev, [qId]: optionIdx }));
@@ -91,7 +85,9 @@ export default function RoundOA_MCQ({ sessionId, onComplete }: Props) {
             onComplete();
         } catch (error) {
             console.error("Submission failed", error);
-            if (!auto) alert("Failed to submit round.");
+            if (!auto) {
+                console.log("Failed to submit round. Please retry.");
+            }
         } finally {
             setSubmitting(false);
         }
@@ -106,15 +102,19 @@ export default function RoundOA_MCQ({ sessionId, onComplete }: Props) {
     const allAnswered = Object.keys(answers).length === questions.length;
 
     return (
-        <div className="max-w-3xl mx-auto p-6">
+        <div className="min-h-full w-full bg-white p-6 md:p-12">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">Round 1: Online Assessment</h2>
                     <p className="text-gray-500 text-sm">Question {currentIndex + 1} of {questions.length}</p>
                 </div>
-                <div className={`text-xl font-mono font-bold px-4 py-2 rounded-lg ${timeLeft < 60 ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                    {formatTime(timeLeft)}
+                <div className="bg-zinc-900 rounded-xl p-2 shadow-lg">
+                    <Timer
+                        duration={15 * 60}
+                        remaining={timeLeft}
+                        size="sm"
+                        showTrack={false}
+                    />
                 </div>
             </div>
 
@@ -127,8 +127,8 @@ export default function RoundOA_MCQ({ sessionId, onComplete }: Props) {
                             key={optIdx}
                             onClick={() => handleAnswer(currentQ.id, optIdx)}
                             className={`w-full text-left p-4 rounded-xl border-2 transition-all ${answers[currentQ.id] === optIdx
-                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium shadow-sm'
-                                    : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'
+                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium shadow-sm'
+                                : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'
                                 }`}
                         >
                             <div className="flex items-center gap-3">
@@ -158,8 +158,8 @@ export default function RoundOA_MCQ({ sessionId, onComplete }: Props) {
                         onClick={() => handleSubmit(false)}
                         disabled={submitting || !allAnswered}
                         className={`px-8 py-3 rounded-xl font-bold shadow-lg transition transform active:scale-95 ${submitting || !allAnswered
-                                ? 'bg-gray-300 cursor-not-allowed text-gray-500 shadow-none'
-                                : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-indigo-500/30'
+                            ? 'bg-gray-300 cursor-not-allowed text-gray-500 shadow-none'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-indigo-500/30'
                             }`}
                     >
                         {submitting ? 'Submitting...' : !allAnswered ? 'Answer All to Submit' : 'Submit Assessment'}

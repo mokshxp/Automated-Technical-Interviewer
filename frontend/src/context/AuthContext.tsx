@@ -8,11 +8,20 @@ interface User {
     full_name: string;
 }
 
+interface Subscription {
+    plan_type: string;
+    billing_interval: string;
+    status: string;
+    end_date: string;
+}
+
 interface AuthContextType {
     user: User | null;
+    subscription: Subscription | null;
     token: string | null;
     login: (token: string) => void;
     logout: () => void;
+    refreshSubscription: () => Promise<void>;
     isAuthenticated: boolean;
     loading: boolean;
 }
@@ -21,26 +30,40 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [subscription, setSubscription] = useState<Subscription | null>(null);
     const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
 
+    const refreshSubscription = async () => {
+        if (!token) return;
+        try {
+            const response = await axios.get('http://localhost:8000/auth/me/subscription');
+            setSubscription(response.data);
+        } catch (error) {
+            console.error("Failed to fetch subscription", error);
+        }
+    };
+
     useEffect(() => {
-        const fetchUser = async () => {
+        const initializeAuth = async () => {
             if (token) {
                 try {
-                    // Set default header
                     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                    const response = await axios.get('http://localhost:8000/auth/me');
-                    setUser(response.data);
+                    const [userRes, subRes] = await Promise.all([
+                        axios.get('http://localhost:8000/auth/me'),
+                        axios.get('http://localhost:8000/auth/me/subscription')
+                    ]);
+                    setUser(userRes.data);
+                    setSubscription(subRes.data);
                 } catch (error) {
-                    console.error("Auth check failed", error);
+                    console.error("Auth initialization failed", error);
                     logout();
                 }
             }
             setLoading(false);
         };
 
-        fetchUser();
+        initializeAuth();
     }, [token]);
 
     const login = (newToken: string) => {
@@ -57,7 +80,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!user, loading }}>
+        <AuthContext.Provider value={{
+            user,
+            subscription,
+            token,
+            login,
+            logout,
+            refreshSubscription,
+            isAuthenticated: !!user,
+            loading
+        }}>
             {children}
         </AuthContext.Provider>
     );

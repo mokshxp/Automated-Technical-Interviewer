@@ -7,9 +7,11 @@ import InterviewSession from './pages/InterviewSession';
 import Results from './pages/Results';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Terms from './pages/Terms';
 import Dashboard from './pages/Dashboard';
 import ResumeManager from './pages/ResumeManager';
 import LearningChat from './pages/LearningChat';
+import Pricing from './pages/Pricing';
 
 // Protected Route Component
 const ProtectedRoute = () => {
@@ -27,6 +29,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/pricing" element={<Pricing />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>

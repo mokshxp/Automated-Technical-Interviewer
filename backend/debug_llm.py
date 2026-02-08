@@ -6,10 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Setup logging to file
-log_file = open("debug_llm_output.txt", "w")
-sys.stdout = log_file
-sys.stderr = log_file
+# log_file = open("debug_llm_output.txt", "w")
+# sys.stdout = log_file
+# sys.stderr = log_file
 
 print("--- DIAGNOSTICS START ---")
 
@@ -28,18 +27,22 @@ if api_key:
         genai.configure(api_key=api_key)
         print("Configuration successful.")
         
-        # mod_list = list(genai.list_models())
-        # print(f"Available Models: {[m.name for m in mod_list]}")
+        try:
+            print("Listing available models...")
+            for m in genai.list_models():
+                if 'gemini' in m.name:
+                    print(f"MODEL: {m.name}")
+        except Exception as e:
+            print(f"Error listing models: {e}")
 
-        model = genai.GenerativeModel('models/gemini-pro-latest')
-        print("Model initialized.")
+        # model = genai.GenerativeModel('models/gemini-pro')
+        # print("Model initialized.")
         
-        response = model.generate_content("Hello")
-        print(f"Generation Success: {response.text}")
-
+        # response = model.generate_content("Hello")
+        # print(f"Generation Success: {response.text}")
     except Exception:
         print("EXCEPTION OCCURRED:")
         traceback.print_exc()
 
 print("--- DIAGNOSTICS END ---")
-log_file.close()
+# log_file.close()

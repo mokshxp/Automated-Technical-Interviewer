@@ -96,6 +96,14 @@ export default function Quiz() {
         }
     };
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, []);
+
     if (loading) return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
             <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -159,8 +167,8 @@ export default function Quiz() {
                             {/* Tags/Difficulty */}
                             <div className="flex gap-2 mb-6">
                                 <span className={`px-2 py-0.5 rounded-full text-xs uppercase tracking-wider font-bold border ${currentQ.difficulty === 'easy' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                        currentQ.difficulty === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                                            'bg-red-500/10 text-red-400 border-red-500/20'
+                                    currentQ.difficulty === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                        'bg-red-500/10 text-red-400 border-red-500/20'
                                     }`}>
                                     {currentQ.difficulty}
                                 </span>
@@ -180,8 +188,8 @@ export default function Quiz() {
                                             whileTap={{ scale: 0.99 }}
                                             onClick={() => handleOptionSelect(idx)}
                                             className={`w-full text-left p-5 rounded-xl border transition-all duration-200 flex items-center justify-between group ${isSelected
-                                                    ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-500/20'
-                                                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                                                ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-500/20'
+                                                : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
                                                 }`}
                                         >
                                             <span className={`text-lg ${isSelected ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
@@ -202,8 +210,8 @@ export default function Quiz() {
                                     onClick={handleNext}
                                     disabled={answers[currentQ.id] === undefined}
                                     className={`px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${answers[currentQ.id] !== undefined
-                                            ? 'bg-white text-indigo-900 hover:bg-indigo-50'
-                                            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                        ? 'bg-white text-indigo-900 hover:bg-indigo-50'
+                                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                                         }`}
                                 >
                                     {currentQIndex === questions.length - 1 ? 'Finish Quiz' : 'Next Question'}

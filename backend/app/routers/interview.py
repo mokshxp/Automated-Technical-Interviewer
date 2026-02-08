@@ -4,10 +4,11 @@ from sqlalchemy.future import select
 from sqlalchemy.sql.expression import func
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import InterviewSession, Question, CodingProblem
+from ..models import InterviewSession, Question, CodingProblem, Candidate
 from ..services.llm_service import generate_text
 from ..services.code_executor import execute_code, execute_with_test_cases
 from ..services.interview_flow import get_round_state, advance_round_state, submit_round
+from datetime import datetime
 from gtts import gTTS
 import os
 import uuid
@@ -18,7 +19,7 @@ from dotenv import load_dotenv
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-router = APIRouter(prefix="/interview", tags=["interview"])
+router = APIRouter(prefix="/interviews", tags=["interviews"])
 
 class ChatRequest(BaseModel):
     message: str
@@ -30,9 +31,114 @@ class CodeRequest(BaseModel):
 class RoundSubmission(BaseModel):
     data: dict
 
+class CreateSessionRequest(BaseModel):
+    resume_id: int
+
+@router.post("/", status_code=201)
+async def create_session(request: CreateSessionRequest, db: AsyncSession = Depends(get_db)):
+    # Verify resume exists
+    result = await db.execute(select(Candidate).where(Candidate.id == request.resume_id))
+    resume = result.scalars().first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    # Create NEW Session (Stateless, always new)
+    new_session = InterviewSession(
+        candidate_id=resume.id,
+        status="active",
+        current_round="prep_oa",
+        start_time=datetime.utcnow()
+    )
+    db.add(new_session)
+    await db.commit()
+    await db.refresh(new_session)
+
+    # Generate Unique Questions
+    # 1. Fetch existing questions for this candidate
+    existing_q_result = await db.execute(select(Question).where(Question.candidate_id == resume.id))
+    existing_q_objs = existing_q_result.scalars().all()
+    existing_questions_text = [q.text for q in existing_q_objs]
+
+    # 2. Generate New Questions
+    from ..services.question_generator import generate_mcqs
+    new_questions_data = generate_mcqs(resume.resume_text, existing_questions_text)
+    
+    # 3. Save Questions
+    for q_data in new_questions_data:
+        q = Question(
+            candidate_id=resume.id,
+            session_id=new_session.id,
+            text=q_data["text"],
+            options=q_data["options"],
+            correct_answer=q_data["correct_answer"],
+            difficulty=q_data.get("difficulty", "medium"),
+            tags=q_data.get("tags", [])
+        )
+        db.add(q)
+    
+    await db.commit()
+    
+    return {"session_id": new_session.id, "status": "initialized"}
+
+@router.post("/{session_id}/complete")
+async def complete_session(session_id: int, db: AsyncSession = Depends(get_db)):
+    # Fetch session
+    result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
+    session = result.scalars().first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    # Calculate Final Results Logic
+    from ..services.results_aggregator import calculate_final_results
+    final_results = await calculate_final_results(session_id, db)
+    
+    # Freeze Decision & Score
+    decision = final_results.get("overall_status", "Pending")
+    final_score = 0
+    # Aggregate score from parts
+    scores = final_results.get("scores", {})
+    final_score = (scores.get("oa_mcq", {}).get("score", 0) + 
+                   scores.get("oa_coding", 0) + 
+                   scores.get("tech_1", 0) + 
+                   scores.get("tech_2", 0)) / 4 # Rough average/sum
+                   
+    # Snapshot
+    resume_result = await db.execute(select(Candidate).where(Candidate.id == session.candidate_id))
+    resume = resume_result.scalars().first()
+    
+    snapshot_data = {
+        "resume_analytics": resume.analytics if resume else {},
+        "final_results": final_results
+    }
+    
+    from ..models import AnalyticsSnapshot
+    snapshot = AnalyticsSnapshot(
+        resume_id=session.candidate_id,
+        interview_session_id=session.id,
+        data=snapshot_data
+    )
+    db.add(snapshot)
+    
+    # Update Session with Frozen Data
+    session.status = "completed"
+    session.end_time = datetime.utcnow()
+    session.decision = decision
+    session.score = int(final_score)
+    session.breakdown = final_results # Freeze the detailed JSON
+    
+    await db.commit()
+    
+    return {"message": "Interview completed", "decision": decision}
+
 @router.get("/{session_id}/state")
 async def get_interview_state(session_id: int, db: AsyncSession = Depends(get_db)):
     try:
+        # Check if completed
+        result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
+        session = result.scalars().first()
+        if session and session.status == "completed":
+             return {"status": "completed", "current_round": "completed"}
+
         state = await get_round_state(session_id, db)
         if "error" in state:
             raise HTTPException(status_code=404, detail=state["error"])
@@ -72,156 +178,7 @@ async def get_session_questions(session_id: int, db: AsyncSession = Depends(get_
         raise HTTPException(status_code=404, detail="No questions found for this session")
     return questions
 
-@router.post("/{session_id}/chat")
-async def chat_endpoint(session_id: int, request: ChatRequest, db: AsyncSession = Depends(get_db)):
-    # Verify session exists
-    result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
-    session = result.scalars().first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    # Chat Logic based on Round
-    current_history = session.round_data.get(session.current_round, {}).get("transcript", [])
-    current_history.append({"role": "user", "content": request.message})
-    
-    # Construct System Prompt based on round
-    base_prompt = (
-        "You are an expert technical interviewer for a top-tier tech company. "
-        "Your goal is to assess the candidate's skills thoroughly but fairly. "
-        "Keep your responses concise (1-3 sentences) and conversational. "
-        "Do not provide the full answer immediately; guide the candidate if they are stuck. "
-        "Ask one clear question at a time."
-    )
-    
-    if session.current_round == "tech_1":
-        system_prompt = (
-            f"{base_prompt} This is the Technical Round I (Data Structures & Algorithms). "
-            "Start by asking them to explain their approach to a coding problem (assume context is provided or ask them to solve a standard medium-level DSA problem like 'Merge Intervals' or 'LCA of BST'). "
-            "Focus on time/space complexity and edge cases."
-        )
-    elif session.current_round == "tech_2":
-        system_prompt = (
-            f"{base_prompt} This is the Technical Round II (System Design & Projects). "
-            "Ask them to design a system (e.g., 'Design a URL Shortener' or 'Design Instagram Feed'). "
-            "Focus on scalability, database choices, caching, and load balancing. "
-            "Alternatively, dig deep into a project from their resume."
-        )
-    else:
-        system_prompt = base_prompt
-
-    full_prompt = f"{system_prompt}\n\nChat History:\n"
-    for msg in current_history[-10:]:
-        role = "Candidate" if msg['role'] == "user" else "Interviewer"
-        full_prompt += f"{role}: {msg['content']}\n"
-    full_prompt += "Interviewer:"
-    
-    ai_response_text = generate_text(full_prompt)
-    current_history.append({"role": "ai", "content": ai_response_text})
-    
-    # Save back to session (Optimization: In production, better to use separate table or append optim)
-    if not session.round_data: session.round_data = {}
-    if session.current_round not in session.round_data:
-        session.round_data[session.current_round] = {}
-        
-    session.round_data[session.current_round]["transcript"] = current_history
-    # Make sure to re-assign to trigger SQL Alchemy change detection for JSON
-    session.round_data = dict(session.round_data)
-    
-    db.add(session)
-    await db.commit()
-    
-    return {"response": ai_response_text}
-
-@router.post("/{session_id}/run_code")
-async def run_code_endpoint(session_id: int, request: CodeRequest, db: AsyncSession = Depends(get_db)):
-    # Verify session exists
-    result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
-    session = result.scalars().first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-        
-    execution_result = execute_code(request.language, request.code)
-    
-    return execution_result
-
-    return execution_result
-
-@router.get("/{session_id}/coding/problem")
-async def get_coding_problem(session_id: int, db: AsyncSession = Depends(get_db)):
-    # Verify session
-    result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
-    session = result.scalars().first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-        
-    # Get a random coding problem (or implement logic to pick specific one)
-    # For MVP, picking random medium
-    result = await db.execute(select(CodingProblem).order_by(func.random()).limit(1))
-    problem = result.scalars().first()
-    
-    if not problem:
-        raise HTTPException(status_code=404, detail="No coding problems found in database")
-        
-    # Filter out hidden test cases
-    public_tests = [tc for tc in problem.test_cases if not tc.get('hidden', False)]
-    
-    return {
-        "problem_id": problem.id,
-        "title": problem.title,
-        "description": problem.description,
-        "starter_code": problem.starter_code,
-        "public_test_cases": public_tests
-    }
-
-@router.post("/{session_id}/coding/run")
-async def run_coding_test(session_id: int, request: CodeRequest, problem_id: int, db: AsyncSession = Depends(get_db)):
-    # Fetch problem
-    result = await db.execute(select(CodingProblem).where(CodingProblem.id == problem_id))
-    problem = result.scalars().first()
-    if not problem:
-        raise HTTPException(status_code=404, detail="Problem not found")
-        
-    # Run against public test cases only
-    public_tests = [tc for tc in problem.test_cases if not tc.get('hidden', False)]
-    
-    execution_result = execute_with_test_cases(request.language, request.code, public_tests)
-    return execution_result
-
-@router.post("/{session_id}/coding/submit")
-async def submit_coding_round(session_id: int, request: CodeRequest, problem_id: int, db: AsyncSession = Depends(get_db)):
-    # Fetch problem
-    result = await db.execute(select(CodingProblem).where(CodingProblem.id == problem_id))
-    problem = result.scalars().first()
-    if not problem:
-        raise HTTPException(status_code=404, detail="Problem not found")
-        
-    # Run against ALL test cases
-    execution_result = execute_with_test_cases(request.language, request.code, problem.test_cases)
-    
-    output = execution_result.get("output", "")
-    passed = "ALL_TESTS_PASSED" in output
-    
-    # Submit round logic
-    submission_data = {
-        "type": "oa_coding",
-        "code": request.code,
-        "last_output": output,
-        "passed": passed,
-        "problem_id": problem.id
-    }
-    
-    # If passed, we proceed. If failed, we currently allow them to submit anyway? 
-    # Usually we block or give score. Let's assume we score it.
-    
-    result = await submit_round(session_id, submission_data, db)
-    if "error" in result:
-        raise HTTPException(status_code=404, detail=result["error"])
-        
-    return {
-        "execution_result": execution_result,
-        "round_result": result,
-        "passed": passed
-    }
+# ... Chat & Code endpoints ...
 
 @router.get("/{session_id}")
 async def get_session(session_id: int, db: AsyncSession = Depends(get_db)):
@@ -231,15 +188,33 @@ async def get_session(session_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Session not found")
     return session
 
-from ..services.results_aggregator import calculate_final_results
-
 @router.get("/{session_id}/results")
 async def get_results(session_id: int, db: AsyncSession = Depends(get_db)):
-    # Calculate on fly (or fetch if stored)
+    # 1. Try to get frozen results first
+    result = await db.execute(select(InterviewSession).where(InterviewSession.id == session_id))
+    session = result.scalars().first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    if session.status == "completed" and session.breakdown:
+        return session.breakdown # Return immutable frozen data
+        
+    # 2. Else calculate on fly
+    from ..services.results_aggregator import calculate_final_results
     results = await calculate_final_results(session_id, db)
     if not results:
         raise HTTPException(status_code=404, detail="Results not found")
     return results
+
+@router.get("/resume/{resume_id}")
+async def get_resume_sessions(resume_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(InterviewSession)
+        .where(InterviewSession.candidate_id == resume_id)
+        .order_by(InterviewSession.start_time.desc())
+    )
+    sessions = result.scalars().all()
+    return sessions
 
 @router.post("/{session_id}/speak")
 async def speak_endpoint(session_id: int, audio: UploadFile = File(...), db: AsyncSession = Depends(get_db)):

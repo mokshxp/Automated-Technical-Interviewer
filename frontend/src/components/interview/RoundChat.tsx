@@ -94,8 +94,8 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
             recorder.start();
             setIsRecording(true);
         } catch (err) {
-            alert("Microphone access denied");
-            console.error(err);
+            console.error("Microphone access denied", err);
+            setMessages(prev => [...prev, { role: 'ai', content: "⚠️ System: Microphone access denied. Please check permissions." }]);
         }
     };
 
@@ -151,7 +151,7 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
 
     const { warning } = useProctoring({
         onTerminate: () => {
-            alert("Interview Terminated due to violations.");
+            console.log("Interview Terminated due to violations.");
             handleNextRound();
         },
         enable: !voiceMode
@@ -162,7 +162,7 @@ export default function RoundChat({ sessionId, roundType, onComplete }: Props) {
     }
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 relative">
+        <div className="flex flex-col min-h-full w-full bg-gray-50 relative overflow-hidden">
             {warning && (
                 <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-bounce">
                     <span className="text-2xl">⚠️</span>
